@@ -42,6 +42,8 @@ const EventID ControllerHandlerContextKey = "event"
 // events sync will help us to handle unexpected errors (e.g. sever restart), it ensures we will not miss any events
 var defaultEventsSyncPeriod = 10 * time.Hour
 
+var defaultOldestEventReportPeriod = 5 * time.Minute
+
 type ControllerHandlerFunc func(ctx context.Context, id string) error
 
 type ControllerConfig struct {
@@ -93,6 +95,10 @@ func (km *KindControllerManager) Run(ctx context.Context) {
 	// start a goroutine to sync all events periodically
 	// use a jitter to avoid multiple instances syncing the events at the same time
 	go wait.JitterUntilWithContext(ctx, km.syncEvents, defaultEventsSyncPeriod, 0.25, true)
+
+	// start a goroutine to emit a gauge of the oldest unreconciled event's age
+	// use a jitter to avoid multiple instances reporting at the same time
+	go wait.JitterUntilWithContext(ctx, km.reportOldestEvent, defaultOldestEventReportPeriod, 0.25, true)
 
 	// start a goroutine to handle the event from the event queue
 	// the .Until will re-kick the runWorker one second after the runWorker completes
@@ -255,4 +261,17 @@ func (km *KindControllerManager) syncEvents(ctx context.Context) {
 	}
 
 	specControllerSyncEventOperationsTotal.WithLabelValues(string(controllerSyncEventStatusSuccess)).Inc()
+}
+
+func (km *KindControllerManager) reportOldestEvent(ctx context.Context) {
+	logger := klog.FromContext(ctx)
+	logger.Info("reporting age oldest unreconciled event")
+
+	ageSeconds, err := km.events.FindAgeOfOldestUnreconciledEvent(ctx)
+	if err != nil {
+		logger.Error(err, "Failed to retrieve age of oldest unreconciled event from db")
+		return
+	}
+
+	specControllerEventOldestUnreconciledAge.WithLabelValues().Set(*ageSeconds)
 }

@@ -17,6 +17,7 @@ type StatusEventService interface {
 	FindByIDs(ctx context.Context, ids []string) (api.StatusEventList, *errors.ServiceError)
 
 	FindAllUnreconciledEvents(ctx context.Context) (api.StatusEventList, *errors.ServiceError)
+	FindAgeOfOldestUnreconciledEvent(ctx context.Context) (*float64, *errors.ServiceError)
 	DeleteAllReconciledEvents(ctx context.Context) *errors.ServiceError
 	DeleteAllEvents(ctx context.Context, eventIDs []string) *errors.ServiceError
 }
@@ -86,6 +87,14 @@ func (s *sqlStatusEventService) FindAllUnreconciledEvents(ctx context.Context) (
 		return nil, errors.GeneralError("Unable to get unreconciled status events: %s", err)
 	}
 	return statusEvents, nil
+}
+
+func (s *sqlStatusEventService) FindAgeOfOldestUnreconciledEvent(ctx context.Context) (*float64, *errors.ServiceError) {
+	ageInSeconds, err := s.statusEventDao.FindAgeOfOldestUnreconciledEvent(ctx)
+	if err != nil {
+		return nil, errors.GeneralError("Unable to get age of oldest unreconciled status event: %s", err)
+	}
+	return ageInSeconds, nil
 }
 
 func (s *sqlStatusEventService) DeleteAllReconciledEvents(ctx context.Context) *errors.ServiceError {

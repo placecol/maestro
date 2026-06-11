@@ -14,16 +14,17 @@ const (
 
 // Names of the metrics:
 const (
-	eventReconcileTotalMetric     = "event_reconcile_total"
-	eventReconcileDurationMetric  = "event_reconcile_duration_seconds"
-	eventSyncOperationTotalMetric = "event_sync_operation_total"
-	DepthMetric                   = "depth"
-	AddsTotalMetric               = "adds_total"
-	QueueDurationMetric           = "queue_duration_seconds"
-	WorkDurationMetric            = "work_duration_seconds"
-	UnfinishedWorkSecondsMetric   = "unfinished_work_seconds"
-	LongestRunningProcessor       = "longest_running_processor_seconds"
-	RetriesTotalMetric            = "retries_total"
+	eventReconcileTotalMetric     	 = "event_reconcile_total"
+	eventReconcileDurationMetric  	 = "event_reconcile_duration_seconds"
+	eventOldestUnreconciledAgeMetric = "event_oldest_unreconciled_age_seconds"
+	eventSyncOperationTotalMetric    = "event_sync_operation_total"
+	DepthMetric                      = "depth"
+	AddsTotalMetric                  = "adds_total"
+	QueueDurationMetric              = "queue_duration_seconds"
+	WorkDurationMetric               = "work_duration_seconds"
+	UnfinishedWorkSecondsMetric      = "unfinished_work_seconds"
+	LongestRunningProcessor          = "longest_running_processor_seconds"
+	RetriesTotalMetric               = "retries_total"
 )
 
 // Names of the labels added to metrics:
@@ -85,6 +86,17 @@ var (
 		[]string{controllerMetricsStatusLabel},
 	)
 
+	// specControllerEventOldestUnreconciledAge is a gauge of the oldest
+	// unreconciled spec event's age in seconds
+	specControllerEventOldestUnreconciledAge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Subsystem: specControllerMetricsSubsystem,
+			Name:      eventOldestUnreconciledAgeMetric,
+			Help:      "Age of the oldest unreconciled spec event in seconds",
+		},
+		[]string{controllerMetricsStatusLabel},
+	)
+
 	// statusEventReconciledTotal is a counter of the total number of events
 	// reconciled by the status controller, labeled by type and status:
 	statusEventReconciledTotal = prometheus.NewCounterVec(
@@ -115,6 +127,17 @@ var (
 			Subsystem: statusControllerMetricsSubsystem,
 			Name:      eventSyncOperationTotalMetric,
 			Help:      "Total number of sync operations performed by the status controller",
+		},
+		[]string{controllerMetricsStatusLabel},
+	)
+
+	// statusControllerEventOldestUnreconciledAge is a gauge of the oldest
+	// unreconciled status event's age in seconds
+	statusControllerEventOldestUnreconciledAge = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Subsystem: specControllerMetricsSubsystem,
+			Name:      eventOldestUnreconciledAgeMetric,
+			Help:      "Age of the oldest unreconciled status event in seconds",
 		},
 		[]string{controllerMetricsStatusLabel},
 	)

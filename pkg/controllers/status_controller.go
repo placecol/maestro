@@ -57,6 +57,9 @@ func (sc *StatusController) Run(ctx context.Context) {
 	// use a jitter to avoid multiple instances syncing the events at the same time
 	go wait.JitterUntilWithContext(ctx, sc.syncStatusEvents, defaultEventsSyncPeriod, 0.25, true)
 
+	// use a jitter to avoid multiple instances reporting at the same time
+	go wait.JitterUntilWithContext(ctx, sc.reportOldestStatusEvent, defaultOldestEventReportPeriod, 0.25, true)
+
 	// start a goroutine to handle the status event from the event queue
 	// the .Until will re-kick the runWorker one second after the runWorker completes
 	go wait.UntilWithContext(ctx, sc.runWorker, time.Second)
@@ -200,4 +203,17 @@ func batchStatusEventIDs(statusEventIDs []string, batchSize int) [][]string {
 		batches = append(batches, statusEventIDs[i:end])
 	}
 	return batches
+}
+
+func (km *StatusController) reportOldestStatusEvent(ctx context.Context) {
+	logger := klog.FromContext(ctx)
+	logger.Info("reporting age of oldest unreconciled status event")
+
+	ageSeconds, err := km.statusEvents.FindAgeOfOldestUnreconciledEvent(ctx)
+	if err != nil {
+		logger.Error(err, "Failed to retrieve age of oldest unreconciled event from db")
+		return
+	}
+
+	statusControllerEventOldestUnreconciledAge.WithLabelValues().Set(*ageSeconds)
 }

@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -97,4 +98,17 @@ func (d *eventDaoMock) FindAllUnreconciledEvents(ctx context.Context) (api.Event
 	}
 
 	return filteredEvents, nil
+}
+
+func (d *eventDaoMock) FindAgeOfOldestUnreconciledEvent(ctx context.Context) (*float64, error) {
+	var minDate float64
+	now := time.Now()
+	for _, e := range d.events {
+		if e.ReconciledDate != nil {
+			continue
+		}
+		minDate = (now.Sub(e.CreatedAt)).Seconds()
+	}
+
+	return &minDate, nil
 }
