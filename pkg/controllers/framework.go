@@ -42,7 +42,8 @@ const EventID ControllerHandlerContextKey = "event"
 // events sync will help us to handle unexpected errors (e.g. sever restart), it ensures we will not miss any events
 var defaultEventsSyncPeriod = 10 * time.Hour
 
-var defaultOldestEventReportPeriod = 5 * time.Minute
+// defaultOldestEventReportPeriod controls the rate at which we poll the db for unreconciled events to report their age
+var defaultOldestEventReportPeriod = 2 * time.Minute
 
 type ControllerHandlerFunc func(ctx context.Context, id string) error
 
