@@ -121,7 +121,7 @@ func (d *sqlStatusEventDao) FindAllUnreconciledEvents(ctx context.Context) (api.
 func (s sqlStatusEventDao) FindAgeOfOldestUnreconciledEvent(ctx context.Context) (*float64, error) {
 	g2 := (*s.sessionFactory).New(ctx)
 	var ageSeconds *float64
-	result := g2.Raw("SELECT EXTRACT(EPOCH FROM now() - MIN(created_at)) FROM status_events WHERE reconciled_date IS NULL;").
+	result := g2.Raw("SELECT EXTRACT(EPOCH FROM now() - MIN(created_at)) FROM status_events WHERE reconciled_date IS NULL").
 		Scan(&ageSeconds)
 	if result.Error != nil {
 		return nil, result.Error

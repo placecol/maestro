@@ -94,7 +94,7 @@ var (
 			Name:      eventOldestUnreconciledAgeMetric,
 			Help:      "Age of the oldest unreconciled spec event in seconds",
 		},
-		[]string{controllerMetricsStatusLabel},
+		[]string{},
 	)
 
 	// statusEventReconciledTotal is a counter of the total number of events
