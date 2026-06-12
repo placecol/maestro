@@ -135,11 +135,11 @@ var (
 	// unreconciled status event's age in seconds
 	statusControllerEventOldestUnreconciledAge = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Subsystem: specControllerMetricsSubsystem,
+			Subsystem: statusControllerMetricsSubsystem,
 			Name:      eventOldestUnreconciledAgeMetric,
 			Help:      "Age of the oldest unreconciled status event in seconds",
 		},
-		[]string{controllerMetricsStatusLabel},
+		[]string{},
 	)
 
 	// workqueueDepth is a gauge of the current depth of workqueues, labeled by name:
