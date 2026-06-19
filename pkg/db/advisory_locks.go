@@ -207,7 +207,7 @@ type AdvisoryLock struct {
 // newAdvisoryLock constructs a new AdvisoryLock object.
 func newAdvisoryLock(ctx context.Context, connection SessionFactory) (*AdvisoryLock, error) {
 	// it requires a new DB session to start the advisory lock.
-	g2 := connection.New(ctx)
+	g2 := connection.NewWithoutTx(ctx)
 
 	// start a Tx to ensure gorm will obtain/release the lock using a same connection.
 	tx := g2.Begin()

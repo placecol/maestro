@@ -8,6 +8,7 @@ import (
 
 	"k8s.io/klog/v2"
 
+	"github.com/openshift-online/maestro/pkg/db"
 	"github.com/openshift-online/maestro/pkg/errors"
 	loggertracing "github.com/openshift-online/maestro/pkg/logger"
 )
@@ -43,7 +44,7 @@ func handleError(ctx context.Context, w http.ResponseWriter, err *errors.Service
 	writeJSONResponse(w, err.HttpCode, err.AsOpenapiError(operationID))
 }
 
-func handle(w http.ResponseWriter, r *http.Request, cfg *handlerConfig, httpStatus int) {
+func handle(w http.ResponseWriter, r *http.Request, cfg *handlerConfig, httpStatus int, session db.SessionFactory) {
 	if cfg.ErrorHandler == nil {
 		cfg.ErrorHandler = handleError
 	}
@@ -68,18 +69,38 @@ func handle(w http.ResponseWriter, r *http.Request, cfg *handlerConfig, httpStat
 		}
 	}
 
-	result, serviceErr := cfg.Action()
-
-	switch {
-	case serviceErr != nil:
-		cfg.ErrorHandler(r.Context(), w, serviceErr)
-	default:
-		writeJSONResponse(w, httpStatus, result)
+	// Create a new Context with the transaction stored in it.
+	ctx, err := db.NewContext(r.Context(), session)
+	if err != nil {
+		cfg.ErrorHandler(r.Context(), w, errors.GeneralError("Could not create database transaction: %v", err))
+		return
 	}
 
+	*r = *r.WithContext(ctx)
+
+	// Resolve transaction once work is complete
+	var serviceErr *errors.ServiceError
+	var result any
+	defer func() {
+		if serviceErr != nil {
+			db.MarkForRollback(ctx, serviceErr)
+		}
+		if resolveErr := db.Resolve(ctx); resolveErr != nil && serviceErr == nil {
+			serviceErr = errors.GeneralError("Error committing transaction: %v", resolveErr)
+		}
+
+		switch {
+		case serviceErr != nil:
+			cfg.ErrorHandler(r.Context(), w, serviceErr)
+		default:
+			writeJSONResponse(w, httpStatus, result)
+		}
+	}()
+
+	result, serviceErr = cfg.Action()
 }
 
-func handleDelete(w http.ResponseWriter, r *http.Request, cfg *handlerConfig, httpStatus int) {
+func handleDelete(w http.ResponseWriter, r *http.Request, cfg *handlerConfig, httpStatus int, session db.SessionFactory) {
 	if cfg.ErrorHandler == nil {
 		cfg.ErrorHandler = handleError
 	}
@@ -91,15 +112,35 @@ func handleDelete(w http.ResponseWriter, r *http.Request, cfg *handlerConfig, ht
 		}
 	}
 
-	result, serviceErr := cfg.Action()
-
-	switch {
-	case serviceErr != nil:
-		cfg.ErrorHandler(r.Context(), w, serviceErr)
-	default:
-		writeJSONResponse(w, httpStatus, result)
+	// Create a new Context with the transaction stored in it.
+	ctx, err := db.NewContext(r.Context(), session)
+	if err != nil {
+		cfg.ErrorHandler(r.Context(), w, errors.GeneralError("Could not create database transaction: %v", err))
+		return
 	}
 
+	*r = *r.WithContext(ctx)
+
+	// Resolve transaction once work is complete
+	var serviceErr *errors.ServiceError
+	var result any
+	defer func() {
+		if serviceErr != nil {
+			db.MarkForRollback(ctx, serviceErr)
+		}
+		if resolveErr := db.Resolve(ctx); resolveErr != nil && serviceErr == nil {
+			serviceErr = errors.GeneralError("Error committing transaction: %v", resolveErr)
+		}
+
+		switch {
+		case serviceErr != nil:
+			cfg.ErrorHandler(r.Context(), w, serviceErr)
+		default:
+			writeJSONResponse(w, httpStatus, result)
+		}
+	}()
+
+	result, serviceErr = cfg.Action()
 }
 
 func handleGet(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {

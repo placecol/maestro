@@ -1,6 +1,8 @@
 package db
 
 import (
+	"context"
+
 	"github.com/openshift-online/maestro/pkg/db/transaction"
 )
 
@@ -15,18 +17,18 @@ func newTransaction(connection SessionFactory) (*transaction.Transaction, error)
 		return nil, nil
 	}
 
-	dbx := connection.DirectDB()
-	tx, err := dbx.Begin()
-	if err != nil {
-		return nil, err
+	db := connection.New(context.Background())
+	tx := db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
 	}
 
 	// current transaction ID set by postgres.  these are *not* distinct across time
 	// and do get reset after postgres performs "vacuuming" to reclaim used IDs.
 	var txid int64
-	row := tx.QueryRow("select txid_current()")
+	row := tx.Raw("select txid_current()")
 	if row != nil {
-		err := row.Scan(&txid)
+		err := row.Scan(&txid).Error
 		if err != nil {
 			return nil, err
 		}
